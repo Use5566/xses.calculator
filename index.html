@@ -166,6 +166,24 @@
     align-items: center;
   }
 
+  /* 新增：清除按鈕樣式 */
+  .clear-btn {
+    display: block;
+    margin: 15px auto 5px auto; /* 確保與上下方保持適當間距，並置中 */
+    padding: 6px 16px;
+    background-color: #fef08a; /* 淡黃色背景 */
+    color: #854d0e; /* 深黃褐色文字以維持閱讀性 */
+    border: 1px solid #fde047;
+    border-radius: 6px;
+    font-size: 0.85em; /* 字體調小 */
+    cursor: pointer;
+    transition: all 0.3s ease;
+  }
+  .clear-btn:hover {
+    background-color: #fde047; /* 滑鼠懸停時加深黃色 */
+    border-color: #facc15;
+  }
+
   /* 新增：維護資訊按鈕與區塊樣式 */
   .maintenance-btn {
     display: block;
@@ -226,6 +244,8 @@
     <hr style="border-top:1px solid #a7f3d0; margin: 15px 0;">
     <div class="breakdown" id="score-breakdown"></div>
   </div>
+
+  <button class="clear-btn" onclick="clearForm()">清除計算結果</button>
 
   <button class="maintenance-btn" onclick="toggleMaintenance()">版本更新及網頁維護 ▾</button>
   <div id="maintenance-info" class="maintenance-info">
@@ -533,6 +553,24 @@
       infoDiv.style.display = 'none';
       btn.innerText = '版本更新及網頁維護 ▾';
     }
+  }
+
+  // 新增：清除表單與計算結果的函數
+  function clearForm() {
+    // 1. 清除所有的 radio 按鈕與 checkbox
+    const inputs = document.querySelectorAll('input[type="radio"], input[type="checkbox"]');
+    inputs.forEach(input => input.checked = false);
+
+    // 2. 隱藏所有的年級選擇區塊
+    const gradeContainers = document.querySelectorAll('.grade-container');
+    gradeContainers.forEach(container => container.style.display = 'none');
+
+    // 3. 隱藏計算結果區塊
+    const resultContainer = document.getElementById('result-container');
+    resultContainer.style.display = 'none';
+
+    // 4. 平滑滾動回畫面最上方
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 </script>
 
