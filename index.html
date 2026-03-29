@@ -35,7 +35,6 @@
     color: #475569;
   }
   
-  /* 學年區塊樣式 */
   .year-block {
     border: 1px solid #e2e8f0;
     border-radius: 6px;
@@ -56,7 +55,6 @@
     padding-left: 8px;
   }
 
-  /* 按鈕群組共用樣式 */
   .button-group {
     display: flex;
     flex-wrap: wrap;
@@ -82,7 +80,6 @@
     border-color: #94a3b8;
   }
   
-  /* 職務按鈕選中狀態 */
   .role-group input[type="radio"]:checked + .choice-btn {
     background-color: #3498db;
     color: #fff;
@@ -90,7 +87,6 @@
     box-shadow: 0 2px 5px rgba(52, 152, 219, 0.3);
   }
 
-  /* 年級按鈕區塊 */
   .grade-container {
     display: none;
     margin-top: 10px;
@@ -112,7 +108,6 @@
     box-shadow: 0 2px 5px rgba(237, 137, 54, 0.3);
   }
 
-  /* 計算按鈕與結果區塊 */
   button.submit-btn {
     display: block;
     width: 100%;
@@ -154,6 +149,60 @@
     margin-top: 8px;
     padding-left: 20px;
   }
+
+  .tie-breaker-notice {
+    margin-top: 30px;
+    padding: 15px;
+    background-color: #fff5f5;
+    border-left: 5px solid #feb2b2;
+    border-radius: 4px;
+    font-size: 0.9em;
+    color: #742a2a;
+  }
+  .tie-breaker-notice h4 {
+    margin-top: 0;
+    color: #c53030;
+    display: flex;
+    align-items: center;
+  }
+
+  /* 新增：維護資訊按鈕與區塊樣式 */
+  .maintenance-btn {
+    display: block;
+    width: 100%;
+    margin-top: 20px;
+    background: transparent;
+    border: 1px solid #cbd5e1;
+    color: #64748b;
+    padding: 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.95em;
+    transition: all 0.3s ease;
+  }
+  .maintenance-btn:hover {
+    background-color: #f8fafc;
+    color: #334155;
+    border-color: #94a3b8;
+  }
+  .maintenance-info {
+    display: none;
+    margin-top: 10px;
+    padding: 15px;
+    background-color: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    font-size: 0.9em;
+    color: #475569;
+    line-height: 1.6;
+  }
+  .maintenance-info a {
+    color: #3498db;
+    text-decoration: none;
+  }
+  .maintenance-info a:hover {
+    text-decoration: underline;
+  }
 </style>
 </head>
 <body>
@@ -164,12 +213,11 @@
     <strong>📌 填寫說明：</strong><br>
     1. 請由「114 學年」開始，直接<strong>點擊方塊</strong>選擇過去 6 個學年的職務。<br>
     2. 若您點選「導師」，下方會自動展開年級選項，系統將依此自動判斷是否連續。<br>
-    3. 導師擔任後母班時，請勾選右上角<strong>「本學年為後母班」</strong>，系統會自動採計您前學年的職務以補足最高分。<br>
+    3. 若該學年因接手 2、4、6 年級導致無接續前一年級，請勾選右上角<strong>「本學年為後母班」</strong>，系統會自動評估並補足最高分。<br>
     4. <strong>本系統不含114.4.30提案之說明二，配合舊制輪動視為連續教學之積分。</strong>
   </div>
 
-  <div id="form-container">
-    </div>
+  <div id="form-container"></div>
 
   <button class="submit-btn" onclick="calculatePoints()">開始計算積分</button>
 
@@ -178,56 +226,61 @@
     <hr style="border-top:1px solid #a7f3d0; margin: 15px 0;">
     <div class="breakdown" id="score-breakdown"></div>
   </div>
+
+  <div class="tie-breaker-notice">
+    <h4>⚖️ 若積分相同時之排序規則 (辦法第29條)</h4>
+    <p>選填志願時若出現同分競爭，將依下列順序優先錄取：</p>
+    <ol style="margin-bottom:0;">
+      <li><strong>本校</strong>之正式教學年資。</li>
+      <li><strong>總</strong>正式教學年資。</li>
+      <li><strong>年長者</strong>優先。</li>
+    </ol>
+  </div>
+
+  <button class="maintenance-btn" onclick="toggleMaintenance()">版本更新及網頁維護 ▾</button>
+  <div id="maintenance-info" class="maintenance-info">
+    本網頁如有問題請來信：<a href="mailto:use123456@mail.xses.ntpc.edu.tw">use123456@mail.xses.ntpc.edu.tw</a><br>
+    20260329修正補分計算，以符合下一次選填志願時補分一次的說明 (編配辦法第 25 條)。
+  </div>
 </div>
 
 <script>
-  // 起始學年與計算年份
   const startYear = 114;
   const yearsCount = 6;
 
-  // 職務選項清單
   const roleOptions = [
     { value: 'admin', text: '行政職' },
     { value: 'homeroom', text: '導師' },
-    { value: 'subject', text: '科任(含多元/專輔/留停晉級)' },
-    { value: 'secondment', text: '商借/調用' },
-    { value: 'leave', text: '留職停薪無晉級/未到本校' }
+    { value: 'subject', text: '科任 (含多元/專輔/留停晉級)' },
+    { value: 'secondment', text: '商借及調用' },
+    { value: 'leave', text: '留職停薪 (無晉級)' }
   ];
 
-  // 年級選項清單
   const gradeOptions = [
-    { value: '1', text: '一年級' },
-    { value: '2', text: '二年級' },
-    { value: '3', text: '三年級' },
-    { value: '4', text: '四年級' },
-    { value: '5', text: '五年級' },
-    { value: '6', text: '六年級' },
-    { value: 'special', text: '特教班' }
+    { value: '1', text: '一年級' }, { value: '2', text: '二年級' },
+    { value: '3', text: '三年級' }, { value: '4', text: '四年級' },
+    { value: '5', text: '五年級' }, { value: '6', text: '六年級' },
+    { value: 'special', text: '特教班/幼兒園' }
   ];
 
-  // 動態產生表單區塊
   const formContainer = document.getElementById('form-container');
   
   for (let i = 0; i < yearsCount; i++) {
     let year = startYear - i;
     
-    // 建立學年外框
     let yearBlock = document.createElement('div');
     yearBlock.className = 'year-block';
     
-    // 學年標題
     let title = document.createElement('div');
     title.className = 'year-label';
     title.innerText = `${year} 學年`;
     yearBlock.appendChild(title);
     
-    // 職務按鈕群組
     let roleGroup = document.createElement('div');
     roleGroup.className = 'button-group role-group';
     
     roleOptions.forEach(opt => {
       let radioId = `role_${year}_${opt.value}`;
-      
       let radio = document.createElement('input');
       radio.type = 'radio';
       radio.name = `role${year}`;
@@ -245,12 +298,10 @@
     });
     yearBlock.appendChild(roleGroup);
 
-    // 年級按鈕區塊 (預設隱藏)
     let gradeContainer = document.createElement('div');
     gradeContainer.className = 'grade-container';
     gradeContainer.id = `grade-container-${year}`;
     
-    // 年級區塊標題 ＆ 後母班勾選框 (排在同一行)
     let gradeHeader = document.createElement('div');
     gradeHeader.style.display = 'flex';
     gradeHeader.style.justifyContent = 'space-between';
@@ -261,7 +312,6 @@
     gradeTitle.className = 'grade-title';
     gradeTitle.innerText = `👉 請選擇 ${year} 學年擔任的年級：`;
     
-    // 後母班 Checkbox
     let stepmotherLabel = document.createElement('label');
     stepmotherLabel.style.fontSize = '0.9em';
     stepmotherLabel.style.color = '#c53030';
@@ -282,13 +332,11 @@
     gradeHeader.appendChild(stepmotherLabel);
     gradeContainer.appendChild(gradeHeader);
 
-    // 年級按鈕群組
     let gradeGroup = document.createElement('div');
     gradeGroup.className = 'button-group grade-group';
     
     gradeOptions.forEach(opt => {
       let radioId = `grade_${year}_${opt.value}`;
-      
       let radio = document.createElement('input');
       radio.type = 'radio';
       radio.name = `grade${year}`;
@@ -309,7 +357,6 @@
     formContainer.appendChild(yearBlock);
   }
 
-  // 顯示或隱藏年級選單
   function toggleGrade(year) {
     const selectedRole = document.querySelector(`input[name="role${year}"]:checked`);
     const gradeContainer = document.getElementById(`grade-container-${year}`);
@@ -318,9 +365,7 @@
       gradeContainer.style.display = 'block';
     } else {
       gradeContainer.style.display = 'none';
-      const gradeRadios = document.querySelectorAll(`input[name="grade${year}"]`);
-      gradeRadios.forEach(r => r.checked = false);
-      // 同時取消後母班勾選
+      document.querySelectorAll(`input[name="grade${year}"]`).forEach(r => r.checked = false);
       const stepmotherCheck = document.getElementById(`stepmother_${year}`);
       if(stepmotherCheck) stepmotherCheck.checked = false;
     }
@@ -329,17 +374,13 @@
   function isHomeroomContinuous(newerGrade, olderGrade) {
     if (newerGrade === 'special' && olderGrade === 'special') return true;
     if (newerGrade === 'special' || olderGrade === 'special') return false;
-
     let nG = parseInt(newerGrade);
     let oG = parseInt(olderGrade);
-
     if (nG === oG + 1) return true;
     if (oG === 6 && nG === 1) return true;
-
     return false;
   }
 
-  // 核心計算邏輯
   function calculatePoints() {
     const ptsMap = {
       'admin': [2, 6, 8, 9, 4, 2],
@@ -349,123 +390,154 @@
       'leave': [0, 0, 0, 0, 0, 0]
     };
 
-    let totalPoints = 0;
-    let streakLength = 0;
-    let breakdownLines = [];
+    let data = [];
 
-    // 防呆檢查：由近期檢查到遠期
-    for (let i = 0; i < yearsCount; i++) {
+    // 防呆檢查並蒐集資料 (由舊到新 109 -> 114)
+    for (let i = yearsCount - 1; i >= 0; i--) {
       let year = startYear - i;
       const roleElement = document.querySelector(`input[name="role${year}"]:checked`);
       if (!roleElement) {
         alert(`⚠️ 請確認「${year} 學年」的職務已點選！`);
         return;
       }
-      if (roleElement.value === 'homeroom') {
+      const role = roleElement.value;
+      let grade = null;
+      if (role === 'homeroom') {
         const gradeElement = document.querySelector(`input[name="grade${year}"]:checked`);
         if (!gradeElement) {
           alert(`⚠️ 您點選了導師，請確認下方「${year} 學年」的年級已點選！`);
           return;
         }
+        grade = gradeElement.value;
+      }
+      const isStepmother = document.getElementById(`stepmother_${year}`)?.checked || false;
+
+      data.push({
+        year: year, role: role, grade: grade,
+        isStepmother: isStepmother, effectiveRole: role,
+        pts: 0, streakId: 0, streakLength: 0
+      });
+    }
+
+    // 核心計算引擎
+    function runCalculationPass() {
+      let currentStreakId = 0;
+      let streakLength = 0;
+      let previousEffectiveRole = null;
+
+      for (let i = 0; i < data.length; i++) {
+        let item = data[i];
+        let isContinuous = false;
+        let effectiveRole = item.role;
+
+        if (i === 0) {
+          streakLength = 0;
+          isContinuous = true;
+        } else {
+          let prevItem = data[i - 1];
+          let isSameTrack = false;
+
+          if (item.role === prevItem.role) {
+            isSameTrack = true;
+          } else if ((item.role === 'admin' || item.role === 'secondment') && 
+                     (prevItem.role === 'admin' || prevItem.role === 'secondment')) {
+            isSameTrack = true;
+          }
+
+          if (item.isStepmother && item.role === 'homeroom' && previousEffectiveRole) {
+            let inheritedPts = ptsMap[previousEffectiveRole][streakLength] !== undefined ? ptsMap[previousEffectiveRole][streakLength] : 0;
+            let restartedPts = ptsMap[item.role][0];
+
+            if (inheritedPts >= restartedPts) {
+              isContinuous = true;
+              effectiveRole = previousEffectiveRole;
+            } else {
+              isContinuous = false;
+              effectiveRole = item.role;
+            }
+          } else if (isSameTrack) {
+            if (item.role === 'admin' || item.role === 'secondment' || item.role === 'subject' || item.role === 'leave') {
+              isContinuous = true;
+            } else if (item.role === 'homeroom') {
+              isContinuous = isHomeroomContinuous(item.grade, prevItem.grade);
+            }
+          }
+        }
+
+        if (isContinuous && i !== 0) {
+          // 軌跡延續
+        } else if (i !== 0) {
+          currentStreakId++; // 軌跡中斷，更換 ID
+          streakLength = 0;
+        }
+
+        item.effectiveRole = effectiveRole;
+        item.streakId = currentStreakId;
+        item.streakLength = streakLength;
+        item.pts = ptsMap[effectiveRole][streakLength] !== undefined ? ptsMap[effectiveRole][streakLength] : 0;
+
+        streakLength++;
+        previousEffectiveRole = effectiveRole;
       }
     }
 
-    // 紀錄「實際計分」所使用的軌道
-    let previousEffectiveRole = null;
+    // 第一階段計算：先假設所有勾選的後母班都有效
+    runCalculationPass();
 
-    // 正向計算：由最舊的學年 (109) 算到最新的學年 (114)
-    for (let i = yearsCount - 1; i >= 0; i--) {
-      let year = startYear - i;
-      
-      const role = document.querySelector(`input[name="role${year}"]:checked`).value;
-      const gradeElement = document.querySelector(`input[name="grade${year}"]:checked`);
-      const grade = role === 'homeroom' ? gradeElement?.value : null;
-      const isStepmother = document.getElementById(`stepmother_${year}`)?.checked;
-
-      let isContinuous = false;
-      let effectiveRole = role; // 預設使用當下選擇的職務計分
-
-      if (i === yearsCount - 1) {
-        // 第一筆資料 (最舊的年份)
-        streakLength = 0;
-        isContinuous = true;
-      } else {
-        // 比較與「前一學年 (較舊)」的關聯性
-        let olderYear = year - 1;
-        let olderRole = document.querySelector(`input[name="role${olderYear}"]:checked`).value;
-        let olderGradeElement = document.querySelector(`input[name="grade${olderYear}"]:checked`);
-        let olderGrade = olderGradeElement ? olderGradeElement.value : null;
-
-        let isSameTrack = false;
-        
-        if (role === olderRole) {
-          isSameTrack = true;
-        } else if ((role === 'admin' || role === 'secondment') && (olderRole === 'admin' || olderRole === 'secondment')) {
-          isSameTrack = true; // 行政與商借互通
-        }
-
-        // 後母班補分機制判斷
-        if (isStepmother && role === 'homeroom' && previousEffectiveRole) {
-          // 比較「繼承前一軌道」與「重新起算」哪個分數高，保障當事人最大權益
-          let inheritedPts = ptsMap[previousEffectiveRole][streakLength] !== undefined ? ptsMap[previousEffectiveRole][streakLength] : 0;
-          let restartedPts = ptsMap[role][0]; // 導師第一年是 2 分
-
-          if (inheritedPts >= restartedPts) {
-            isContinuous = true;
-            effectiveRole = previousEffectiveRole; // 繼承前一年的計分軌道
-          } else {
-            // 如果繼承的分數反而比較低，直接視為重新起算
-            isContinuous = false;
-            effectiveRole = role;
-          }
-        } else if (isSameTrack) {
-          if (role === 'admin' || role === 'secondment' || role === 'subject' || role === 'leave') {
-            isContinuous = true;
-          } else if (role === 'homeroom') {
-            isContinuous = isHomeroomContinuous(grade, olderGrade);
-          }
-        }
+    // 智慧防呆：檢查後母班軌跡是否成功延續到 114 學年
+    let targetStreakId = data[data.length - 1].streakId; // 114 學年所屬的軌跡 ID
+    for (let i = 0; i < data.length; i++) {
+      if (data[i].isStepmother && data[i].streakId !== targetStreakId) {
+        // 若該後母班不在最終的連續軌跡上，代表權利已於過往消耗，系統背景註銷其補分資格
+        data[i].isStepmother = false;
       }
+    }
 
-      // 產生顯示名稱與補分標示
-      let displayRoleName = roleOptions.find(opt => opt.value === role).text.split(' ')[0];
-      if (role === 'homeroom') {
-        let gradeText = gradeOptions.find(opt => opt.value === grade).text;
+    // 第二階段計算：使用修正後的權益再次計算最終真實分數
+    runCalculationPass();
+
+    // 產生結果報表 (倒序顯示 114 -> 109)
+    let totalPoints = 0;
+    let breakdownLines = [];
+    
+    for (let i = data.length - 1; i >= 0; i--) {
+      let item = data[i];
+      totalPoints += item.pts;
+      
+      let displayRoleName = roleOptions.find(opt => opt.value === item.role).text.split(' ')[0];
+      if (item.role === 'homeroom') {
+        let gradeText = gradeOptions.find(opt => opt.value === item.grade).text;
         displayRoleName += ` (${gradeText})`;
         
-        if (isStepmother && effectiveRole !== role) {
-          let effRoleText = roleOptions.find(opt => opt.value === effectiveRole).text.split(' ')[0];
-          displayRoleName += ` <span style="color:#e53e3e; font-weight:bold;">[補分：接續${effRoleText}]</span>`;
-        } else if (isStepmother) {
+        if (item.isStepmother && item.effectiveRole !== item.role) {
+          let effRoleText = roleOptions.find(opt => opt.value === item.effectiveRole).text.split(' ')[0];
+          displayRoleName += ` <span style="color:#e53e3e; font-weight:bold;">[補分：接續${effRoleText}軌跡]</span>`;
+        } else if (item.isStepmother) {
            displayRoleName += ` <span style="color:#e53e3e; font-weight:bold;">[後母班]</span>`;
         }
       }
 
-      // 計算分數
-      if (isContinuous) {
-        let pts = ptsMap[effectiveRole][streakLength] !== undefined ? ptsMap[effectiveRole][streakLength] : 0;
-        totalPoints += pts;
-        breakdownLines.unshift(`<li>${year} 學年：${displayRoleName} (連續第 ${streakLength + 1} 年) 獲得 <strong>${pts}</strong> 分</li>`);
-        streakLength++;
-      } else {
-        streakLength = 0;
-        let pts = ptsMap[effectiveRole][streakLength] !== undefined ? ptsMap[effectiveRole][streakLength] : 0;
-        totalPoints += pts;
-        breakdownLines.unshift(`<li>${year} 學年：${displayRoleName} (重新起算) 獲得 <strong>${pts}</strong> 分</li>`);
-        streakLength++;
-      }
-      
-      // 更新記錄，留給下一年參考
-      previousEffectiveRole = effectiveRole;
+      let statusText = (item.streakLength === 0) ? "(重新起算)" : `(連續第 ${item.streakLength + 1} 年)`;
+      breakdownLines.push(`<li>${item.year} 學年：${displayRoleName} ${statusText} 獲得 <strong>${item.pts}</strong> 分</li>`);
     }
 
-    let breakdownHTML = "<strong>各學年得分明細（由近期回溯）：</strong><ul>" + breakdownLines.join('') + "</ul>";
-    
     document.getElementById('final-score').innerText = totalPoints;
-    document.getElementById('score-breakdown').innerHTML = breakdownHTML;
+    document.getElementById('score-breakdown').innerHTML = "<strong>各學年得分明細（由近期回溯）：</strong><ul>" + breakdownLines.join('') + "</ul>";
     document.getElementById('result-container').style.display = 'block';
-    
     document.getElementById('result-container').scrollIntoView({ behavior: 'smooth' });
+  }
+
+  // 新增：切換維護資訊顯示狀態的函數
+  function toggleMaintenance() {
+    const infoDiv = document.getElementById('maintenance-info');
+    const btn = document.querySelector('.maintenance-btn');
+    if (infoDiv.style.display === 'none' || infoDiv.style.display === '') {
+      infoDiv.style.display = 'block';
+      btn.innerText = '版本更新及網頁維護 ▴';
+    } else {
+      infoDiv.style.display = 'none';
+      btn.innerText = '版本更新及網頁維護 ▾';
+    }
   }
 </script>
 
