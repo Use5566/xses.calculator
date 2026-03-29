@@ -522,7 +522,7 @@
         
         if (item.isStepmother && item.effectiveRole !== item.role) {
           let effRoleText = roleOptions.find(opt => opt.value === item.effectiveRole).text.split(' ')[0];
-          displayRoleName += ` <span style="color:#e53e3e; font-weight:bold;">[補分：接續${effRoleText}軌跡]</span>`;
+          displayRoleName += ` <span style="color:#e53e3e; font-weight:bold;">[補分：接續${effRoleText}]</span>`;
         } else if (item.isStepmother) {
            displayRoleName += ` <span style="color:#e53e3e; font-weight:bold;">[後母班]</span>`;
         } else if (item.originalStepmother && !item.isStepmother) {
