@@ -227,8 +227,6 @@
     <div class="breakdown" id="score-breakdown"></div>
   </div>
 
-
-
   <button class="maintenance-btn" onclick="toggleMaintenance()">版本更新及網頁維護 ▾</button>
   <div id="maintenance-info" class="maintenance-info">
     本網頁如有問題請來信：<a href="mailto:use123456@mail.xses.ntpc.edu.tw">use123456@mail.xses.ntpc.edu.tw</a><br>
@@ -406,7 +404,7 @@
 
       data.push({
         year: year, role: role, grade: grade,
-        isStepmother: isStepmother, effectiveRole: role,
+        isStepmother: isStepmother, originalStepmother: isStepmother, effectiveRole: role,
         pts: 0, streakId: 0, streakLength: 0
       });
     }
@@ -495,6 +493,7 @@
     for (let i = data.length - 1; i >= 0; i--) {
       let item = data[i];
       totalPoints += item.pts;
+      let extraNotice = "";
       
       let displayRoleName = roleOptions.find(opt => opt.value === item.role).text.split(' ')[0];
       if (item.role === 'homeroom') {
@@ -506,11 +505,15 @@
           displayRoleName += ` <span style="color:#e53e3e; font-weight:bold;">[補分：接續${effRoleText}軌跡]</span>`;
         } else if (item.isStepmother) {
            displayRoleName += ` <span style="color:#e53e3e; font-weight:bold;">[後母班]</span>`;
+        } else if (item.originalStepmother && !item.isStepmother) {
+           // 新增判斷：有勾選但被防呆機制取消，代表過往已使用
+           let nextYear = item.year + 1;
+           extraNotice = ` <span style="color:#64748b; font-size:0.9em;">(後母班學年、補分於選填${nextYear}時使用完畢)</span>`;
         }
       }
 
       let statusText = (item.streakLength === 0) ? "(重新起算)" : `(連續第 ${item.streakLength + 1} 年)`;
-      breakdownLines.push(`<li>${item.year} 學年：${displayRoleName} ${statusText} 獲得 <strong>${item.pts}</strong> 分</li>`);
+      breakdownLines.push(`<li>${item.year} 學年：${displayRoleName} ${statusText} 獲得 <strong>${item.pts}</strong> 分${extraNotice}</li>`);
     }
 
     document.getElementById('final-score').innerText = totalPoints;
