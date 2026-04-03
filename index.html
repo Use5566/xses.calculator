@@ -46,11 +46,18 @@
   .year-block:hover {
     box-shadow: 0 2px 8px rgba(0,0,0,0.05);
   }
+  
+  /* 新增：將標題與未到職包在同一行的容器 */
+  .year-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+  }
   .year-label {
     font-weight: bold;
     font-size: 1.05em;
     color: #1e293b;
-    margin-bottom: 8px;
     border-left: 4px solid #3498db;
     padding-left: 8px;
     transition: opacity 0.3s;
@@ -296,10 +303,40 @@
     yearBlock.className = 'year-block';
     yearBlock.id = `year-block-${year}`; // 新增 ID 以便套用遮罩
     
+    // 新增：建立 Header 區塊，用來水平排列標題與未到職
+    let headerRow = document.createElement('div');
+    headerRow.className = 'year-header';
+
     let title = document.createElement('div');
     title.className = 'year-label';
     title.innerText = `${year} 學年`;
-    yearBlock.appendChild(title);
+    headerRow.appendChild(title);
+    
+    // 將 113~109 學年的「未到職」選項提上來放置在 Header 的最右側
+    if (year < 114) {
+      let neLabel = document.createElement('label');
+      neLabel.style.fontSize = '0.95em';
+      neLabel.style.color = '#718096';
+      neLabel.style.cursor = 'pointer';
+      neLabel.style.fontWeight = 'bold';
+      neLabel.style.userSelect = 'none';
+      neLabel.style.display = 'flex';
+      neLabel.style.alignItems = 'center';
+
+      let neCheck = document.createElement('input');
+      neCheck.type = 'checkbox';
+      neCheck.id = `not_employed_${year}`;
+      neCheck.style.marginRight = '6px';
+      neCheck.style.cursor = 'pointer';
+      neCheck.onchange = handleNotEmployedChange;
+
+      neLabel.appendChild(neCheck);
+      neLabel.appendChild(document.createTextNode('未到職'));
+      
+      headerRow.appendChild(neLabel);
+    }
+    
+    yearBlock.appendChild(headerRow);
     
     let roleGroup = document.createElement('div');
     roleGroup.className = 'button-group role-group';
@@ -378,34 +415,6 @@
     });
     gradeContainer.appendChild(gradeGroup);
     yearBlock.appendChild(gradeContainer);
-
-    // 新增：113~109 學年的左下角「未到職」選項
-    if (year < 114) {
-      let neContainer = document.createElement('div');
-      neContainer.style.marginTop = '10px';
-      neContainer.style.display = 'flex';
-      neContainer.style.justifyContent = 'flex-start';
-
-      let neLabel = document.createElement('label');
-      neLabel.style.fontSize = '0.95em';
-      neLabel.style.color = '#718096';
-      neLabel.style.cursor = 'pointer';
-      neLabel.style.fontWeight = 'bold';
-      neLabel.style.userSelect = 'none';
-
-      let neCheck = document.createElement('input');
-      neCheck.type = 'checkbox';
-      neCheck.id = `not_employed_${year}`;
-      neCheck.style.marginRight = '6px';
-      neCheck.style.cursor = 'pointer';
-      neCheck.onchange = handleNotEmployedChange;
-
-      neLabel.appendChild(neCheck);
-      neLabel.appendChild(document.createTextNode('未到職'));
-      neContainer.appendChild(neLabel);
-
-      yearBlock.appendChild(neContainer);
-    }
     
     formContainer.appendChild(yearBlock);
   }
