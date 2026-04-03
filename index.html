@@ -41,7 +41,7 @@
     padding: 12px 15px;
     margin-bottom: 12px;
     background-color: #fafbfc;
-    transition: box-shadow 0.2s;
+    transition: box-shadow 0.2s, opacity 0.3s;
   }
   .year-block:hover {
     box-shadow: 0 2px 8px rgba(0,0,0,0.05);
@@ -53,6 +53,20 @@
     margin-bottom: 8px;
     border-left: 4px solid #3498db;
     padding-left: 8px;
+    transition: opacity 0.3s;
+  }
+
+  /* 新增：未到職遮罩樣式 */
+  .year-block.dimmed-partial .role-group,
+  .year-block.dimmed-partial .grade-container,
+  .year-block.dimmed-partial .year-label {
+    opacity: 0.4;
+    pointer-events: none;
+  }
+  .year-block.dimmed-full {
+    opacity: 0.4;
+    pointer-events: none;
+    background-color: #f1f5f9;
   }
 
   .button-group {
@@ -94,6 +108,7 @@
     background-color: #fffaf0;
     border: 1px dashed #f6ad55;
     border-radius: 6px;
+    transition: opacity 0.3s;
   }
   .grade-title {
     font-size: 0.85em;
@@ -166,25 +181,23 @@
     align-items: center;
   }
 
-  /* 新增：清除按鈕樣式 */
   .clear-btn {
     display: block;
-    margin: 15px auto 5px auto; /* 確保與上下方保持適當間距，並置中 */
+    margin: 15px auto 5px auto;
     padding: 6px 16px;
-    background-color: #fef08a; /* 淡黃色背景 */
-    color: #854d0e; /* 深黃褐色文字以維持閱讀性 */
+    background-color: #fef08a;
+    color: #854d0e;
     border: 1px solid #fde047;
     border-radius: 6px;
-    font-size: 0.85em; /* 字體調小 */
+    font-size: 0.85em;
     cursor: pointer;
     transition: all 0.3s ease;
   }
   .clear-btn:hover {
-    background-color: #fde047; /* 滑鼠懸停時加深黃色 */
+    background-color: #fde047;
     border-color: #facc15;
   }
 
-  /* 新增：維護資訊按鈕與區塊樣式 */
   .maintenance-btn {
     display: block;
     width: 100%;
@@ -232,7 +245,8 @@
     1. 請由「114 學年」開始，直接<strong>點擊方塊</strong>選擇過去 6 個學年的職務。<br>
     2. 若您點選「導師」，下方會自動展開年級選項，系統將依此自動判斷是否連續。<br>
     3. 若該學年因接手 2、4、6 年級導致無接續前一年級，請勾選右上角<strong>「本學年為後母班」</strong>，系統會自動評估並補足最高分。<br>
-    4. <strong>本系統不含114.4.30提案之說明二，配合舊制輪動視為連續教學之積分。</strong>
+    4. 「科任」選項包含多元學習班、專任輔導教師、留職停薪(有晉級)。<br>
+    5. <strong>本系統不含114.4.30提案之說明二，配合舊制輪動視為連續教學之積分。</strong>
   </div>
 
   <div id="form-container"></div>
@@ -261,16 +275,16 @@
   const roleOptions = [
     { value: 'admin', text: '行政職' },
     { value: 'homeroom', text: '導師' },
-    { value: 'subject', text: '科任 (含多元/專輔/留停晉級)' },
-    { value: 'secondment', text: '商借及調用' },
-    { value: 'leave', text: '留職停薪 (無晉級)' }
+    { value: 'subject', text: '科任' },
+    { value: 'secondment', text: '商借或調用' },
+    { value: 'leave', text: '留職停薪(無晉級)' }
   ];
 
   const gradeOptions = [
     { value: '1', text: '一年級' }, { value: '2', text: '二年級' },
     { value: '3', text: '三年級' }, { value: '4', text: '四年級' },
     { value: '5', text: '五年級' }, { value: '6', text: '六年級' },
-    { value: 'special', text: '特教班/幼兒園' }
+    { value: 'special', text: '特教班' }
   ];
 
   const formContainer = document.getElementById('form-container');
@@ -280,6 +294,7 @@
     
     let yearBlock = document.createElement('div');
     yearBlock.className = 'year-block';
+    yearBlock.id = `year-block-${year}`; // 新增 ID 以便套用遮罩
     
     let title = document.createElement('div');
     title.className = 'year-label';
@@ -363,8 +378,90 @@
     });
     gradeContainer.appendChild(gradeGroup);
     yearBlock.appendChild(gradeContainer);
+
+    // 新增：113~109 學年的左下角「未到職」選項
+    if (year < 114) {
+      let neContainer = document.createElement('div');
+      neContainer.style.marginTop = '10px';
+      neContainer.style.display = 'flex';
+      neContainer.style.justifyContent = 'flex-start';
+
+      let neLabel = document.createElement('label');
+      neLabel.style.fontSize = '0.95em';
+      neLabel.style.color = '#718096';
+      neLabel.style.cursor = 'pointer';
+      neLabel.style.fontWeight = 'bold';
+      neLabel.style.userSelect = 'none';
+
+      let neCheck = document.createElement('input');
+      neCheck.type = 'checkbox';
+      neCheck.id = `not_employed_${year}`;
+      neCheck.style.marginRight = '6px';
+      neCheck.style.cursor = 'pointer';
+      neCheck.onchange = handleNotEmployedChange;
+
+      neLabel.appendChild(neCheck);
+      neLabel.appendChild(document.createTextNode('未到職'));
+      neContainer.appendChild(neLabel);
+
+      yearBlock.appendChild(neContainer);
+    }
     
     formContainer.appendChild(yearBlock);
+  }
+
+  // 新增：處理未到職連動邏輯
+  function handleNotEmployedChange() {
+    let maxNotEmployedYear = -1;
+    // 找出有勾選「未到職」的最新學年
+    for (let y = startYear - 1; y >= startYear - yearsCount + 1; y--) {
+      let cb = document.getElementById(`not_employed_${y}`);
+      if (cb && cb.checked) {
+        if (y > maxNotEmployedYear) {
+          maxNotEmployedYear = y;
+        }
+      }
+    }
+
+    // 依據最新未到職學年，更新所有區塊狀態
+    for (let i = 0; i < yearsCount; i++) {
+      let y = startYear - i;
+      let yearBlock = document.getElementById(`year-block-${y}`);
+      if (!yearBlock) continue;
+
+      let roleInputs = document.querySelectorAll(`input[name="role${y}"]`);
+      let gradeInputs = document.querySelectorAll(`input[name="grade${y}"]`);
+      let smCheck = document.getElementById(`stepmother_${y}`);
+      let neCheck = document.getElementById(`not_employed_${y}`);
+
+      // 先移除遮罩 class
+      yearBlock.classList.remove('dimmed-partial', 'dimmed-full');
+
+      if (maxNotEmployedYear !== -1 && y <= maxNotEmployedYear) {
+        if (y === maxNotEmployedYear) {
+          // 勾選的該年：只把職務與年級遮罩（保留未到職框可取消）
+          yearBlock.classList.add('dimmed-partial');
+          roleInputs.forEach(r => { r.disabled = true; r.checked = false; });
+          gradeInputs.forEach(r => { r.disabled = true; r.checked = false; });
+          if (smCheck) { smCheck.disabled = true; smCheck.checked = false; }
+          toggleGrade(y); // 收起年級選單
+        } else {
+          // 更早的學年：整塊鎖定變暗
+          yearBlock.classList.add('dimmed-full');
+          roleInputs.forEach(r => { r.disabled = true; r.checked = false; });
+          gradeInputs.forEach(r => { r.disabled = true; r.checked = false; });
+          if (smCheck) { smCheck.disabled = true; smCheck.checked = false; }
+          if (neCheck) { neCheck.disabled = true; neCheck.checked = false; }
+          toggleGrade(y);
+        }
+      } else {
+        // 恢復正常狀態
+        roleInputs.forEach(r => r.disabled = false);
+        gradeInputs.forEach(r => r.disabled = false);
+        if (smCheck) smCheck.disabled = false;
+        if (neCheck) neCheck.disabled = false;
+      }
+    }
   }
 
   function toggleGrade(year) {
@@ -397,7 +494,8 @@
       'homeroom': [2, 3, 5, 8, 4, 2],
       'subject': [1, 2, 4, 6, 3, 1],
       'secondment': [1, 3, 4, 4.5, 2, 1],
-      'leave': [0, 0, 0, 0, 0, 0]
+      'leave': [0, 0, 0, 0, 0, 0],
+      'not_employed': [0, 0, 0, 0, 0, 0] // 新增未到職的給分邏輯
     };
 
     let data = [];
@@ -405,6 +503,18 @@
     // 防呆檢查並蒐集資料 (由舊到新 109 -> 114)
     for (let i = yearsCount - 1; i >= 0; i--) {
       let year = startYear - i;
+      let yearBlock = document.getElementById(`year-block-${year}`);
+      
+      // 如果該區塊被標記為未到職遮罩，自動視為未到職並跳過檢查
+      if (yearBlock.classList.contains('dimmed-partial') || yearBlock.classList.contains('dimmed-full')) {
+        data.push({
+          year: year, role: 'not_employed', grade: null,
+          isStepmother: false, originalStepmother: false, effectiveRole: 'not_employed',
+          pts: 0, streakId: 0, streakLength: 0
+        });
+        continue;
+      }
+
       const roleElement = document.querySelector(`input[name="role${year}"]:checked`);
       if (!roleElement) {
         alert(`⚠️ 請確認「${year} 學年」的職務已點選！`);
@@ -513,8 +623,14 @@
     for (let i = data.length - 1; i >= 0; i--) {
       let item = data[i];
       totalPoints += item.pts;
-      let extraNotice = "";
       
+      // 若該年為未到職，直接顯示無積分並跳過後續名稱組合
+      if (item.role === 'not_employed') {
+        breakdownLines.push(`<li>${item.year} 學年：<span style="color:#718096;">未到職 (無積分)</span></li>`);
+        continue;
+      }
+
+      let extraNotice = "";
       let displayRoleName = roleOptions.find(opt => opt.value === item.role).text.split(' ')[0];
       if (item.role === 'homeroom') {
         let gradeText = gradeOptions.find(opt => opt.value === item.grade).text;
@@ -565,11 +681,14 @@
     const gradeContainers = document.querySelectorAll('.grade-container');
     gradeContainers.forEach(container => container.style.display = 'none');
 
-    // 3. 隱藏計算結果區塊
+    // 3. 恢復所有未到職的遮罩與停用狀態
+    handleNotEmployedChange();
+
+    // 4. 隱藏計算結果區塊
     const resultContainer = document.getElementById('result-container');
     resultContainer.style.display = 'none';
 
-    // 4. 平滑滾動回畫面最上方
+    // 5. 平滑滾動回畫面最上方
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 </script>
