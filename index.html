@@ -620,7 +620,17 @@
 
       let currentLen = streakLengths[sid];
       item.streakLength = currentLen;
-      item.pts = ptsMap[item.effectiveRole][currentLen] !== undefined ? ptsMap[item.effectiveRole][currentLen] : 0;
+      
+      // 修正商借或調用分數折半的問題：
+      // 當行政職與商借混合在同一軌道時，依照當年度的「實際職務」來決定取用哪個分數陣列。
+      let roleForPts = item.effectiveRole;
+      if (item.effectiveRole === 'admin' && item.role === 'secondment') {
+        roleForPts = 'secondment';
+      } else if (item.effectiveRole === 'secondment' && item.role === 'admin') {
+        roleForPts = 'admin';
+      }
+
+      item.pts = ptsMap[roleForPts][currentLen] !== undefined ? ptsMap[roleForPts][currentLen] : 0;
 
       streakLengths[sid]++; // 往下一個逆向年份遞增
     }
