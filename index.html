@@ -47,7 +47,6 @@
     box-shadow: 0 2px 8px rgba(0,0,0,0.05);
   }
   
-  /* 新增：將標題與未到職包在同一行的容器 */
   .year-header {
     display: flex;
     justify-content: space-between;
@@ -63,7 +62,6 @@
     transition: opacity 0.3s;
   }
 
-  /* 新增：未到職遮罩樣式 */
   .year-block.dimmed-partial .role-group,
   .year-block.dimmed-partial .grade-container,
   .year-block.dimmed-partial .year-label {
@@ -172,22 +170,6 @@
     padding-left: 20px;
   }
 
-  .tie-breaker-notice {
-    margin-top: 30px;
-    padding: 15px;
-    background-color: #fff5f5;
-    border-left: 5px solid #feb2b2;
-    border-radius: 4px;
-    font-size: 0.9em;
-    color: #742a2a;
-  }
-  .tie-breaker-notice h4 {
-    margin-top: 0;
-    color: #c53030;
-    display: flex;
-    align-items: center;
-  }
-
   .clear-btn {
     display: block;
     margin: 15px auto 5px auto;
@@ -272,7 +254,8 @@
   <div id="maintenance-info" class="maintenance-info">
     本網頁如有問題請來信：<a href="mailto:use123456@mail.xses.ntpc.edu.tw">use123456@mail.xses.ntpc.edu.tw</a><br>
     20260329修正補分計算，以符合下一次選填志願時補分一次的說明 (編配辦法第 25 條)。新增清除按鈕。<br>
-    20260403新增未到職選項及未滿6年的計算模式，精簡職務選項文字。
+    20260403新增未到職選項及未滿6年的計算模式，精簡職務選項文字。<br>
+    20260413修正回溯給分邏輯，連續累積分數由低分加至高分(編配辦法第21條)。
   </div>
 </div>
 
@@ -302,9 +285,8 @@
     
     let yearBlock = document.createElement('div');
     yearBlock.className = 'year-block';
-    yearBlock.id = `year-block-${year}`; // 新增 ID 以便套用遮罩
+    yearBlock.id = `year-block-${year}`; 
     
-    // 新增：建立 Header 區塊，用來水平排列標題與未到職
     let headerRow = document.createElement('div');
     headerRow.className = 'year-header';
 
@@ -313,7 +295,6 @@
     title.innerText = `${year} 學年`;
     headerRow.appendChild(title);
     
-    // 將 113~109 學年的「未到職」選項提上來放置在 Header 的最右側
     if (year < 114) {
       let neLabel = document.createElement('label');
       neLabel.style.fontSize = '0.95em';
@@ -420,10 +401,8 @@
     formContainer.appendChild(yearBlock);
   }
 
-  // 新增：處理未到職連動邏輯
   function handleNotEmployedChange() {
     let maxNotEmployedYear = -1;
-    // 找出有勾選「未到職」的最新學年
     for (let y = startYear - 1; y >= startYear - yearsCount + 1; y--) {
       let cb = document.getElementById(`not_employed_${y}`);
       if (cb && cb.checked) {
@@ -433,7 +412,6 @@
       }
     }
 
-    // 依據最新未到職學年，更新所有區塊狀態
     for (let i = 0; i < yearsCount; i++) {
       let y = startYear - i;
       let yearBlock = document.getElementById(`year-block-${y}`);
@@ -444,19 +422,16 @@
       let smCheck = document.getElementById(`stepmother_${y}`);
       let neCheck = document.getElementById(`not_employed_${y}`);
 
-      // 先移除遮罩 class
       yearBlock.classList.remove('dimmed-partial', 'dimmed-full');
 
       if (maxNotEmployedYear !== -1 && y <= maxNotEmployedYear) {
         if (y === maxNotEmployedYear) {
-          // 勾選的該年：只把職務與年級遮罩（保留未到職框可取消）
           yearBlock.classList.add('dimmed-partial');
           roleInputs.forEach(r => { r.disabled = true; r.checked = false; });
           gradeInputs.forEach(r => { r.disabled = true; r.checked = false; });
           if (smCheck) { smCheck.disabled = true; smCheck.checked = false; }
-          toggleGrade(y); // 收起年級選單
+          toggleGrade(y);
         } else {
-          // 更早的學年：整塊鎖定變暗
           yearBlock.classList.add('dimmed-full');
           roleInputs.forEach(r => { r.disabled = true; r.checked = false; });
           gradeInputs.forEach(r => { r.disabled = true; r.checked = false; });
@@ -465,7 +440,6 @@
           toggleGrade(y);
         }
       } else {
-        // 恢復正常狀態
         roleInputs.forEach(r => r.disabled = false);
         gradeInputs.forEach(r => r.disabled = false);
         if (smCheck) smCheck.disabled = false;
@@ -505,17 +479,16 @@
       'subject': [1, 2, 4, 6, 3, 1],
       'secondment': [1, 3, 4, 4.5, 2, 1],
       'leave': [0, 0, 0, 0, 0, 0],
-      'not_employed': [0, 0, 0, 0, 0, 0] // 新增未到職的給分邏輯
+      'not_employed': [0, 0, 0, 0, 0, 0] 
     };
 
     let data = [];
 
-    // 防呆檢查並蒐集資料 (由舊到新 109 -> 114)
+    // 將資料依序由 109 收集到 114 (正向時間軸)
     for (let i = yearsCount - 1; i >= 0; i--) {
       let year = startYear - i;
       let yearBlock = document.getElementById(`year-block-${year}`);
       
-      // 如果該區塊被標記為未到職遮罩，自動視為未到職並跳過檢查
       if (yearBlock.classList.contains('dimmed-partial') || yearBlock.classList.contains('dimmed-full')) {
         data.push({
           year: year, role: 'not_employed', grade: null,
@@ -549,20 +522,29 @@
       });
     }
 
-    // 核心計算引擎
-    function runCalculationPass() {
+    // 第一階段：正向時間軸 (109->114) 確認軌跡連貫性與有效職務
+    function runForwardTrackPass() {
       let currentStreakId = 0;
-      let streakLength = 0;
-      let previousEffectiveRole = null;
+      let currentStreakRole = null;
+      let forwardStreakLength = 0;
 
       for (let i = 0; i < data.length; i++) {
         let item = data[i];
         let isContinuous = false;
-        let effectiveRole = item.role;
 
-        if (i === 0) {
-          streakLength = 0;
+        if (item.role === 'not_employed') {
+          item.effectiveRole = 'not_employed';
+          currentStreakId++;
+          item.streakId = currentStreakId;
+          currentStreakRole = null;
+          forwardStreakLength = 0;
+          continue;
+        }
+
+        if (i === 0 || currentStreakRole === null) {
           isContinuous = true;
+          currentStreakRole = item.role;
+          forwardStreakLength = 0;
         } else {
           let prevItem = data[i - 1];
           let isSameTrack = false;
@@ -574,16 +556,15 @@
             isSameTrack = true;
           }
 
-          if (item.isStepmother && item.role === 'homeroom' && previousEffectiveRole) {
-            let inheritedPts = ptsMap[previousEffectiveRole][streakLength] !== undefined ? ptsMap[previousEffectiveRole][streakLength] : 0;
+          if (item.isStepmother && item.role === 'homeroom') {
+            // 後母班模擬試算：若接續原軌道能拿到更好或相同分數，則強行接續
+            let inheritedPts = ptsMap[currentStreakRole][forwardStreakLength + 1] !== undefined ? ptsMap[currentStreakRole][forwardStreakLength + 1] : 0;
             let restartedPts = ptsMap[item.role][0];
 
             if (inheritedPts >= restartedPts) {
               isContinuous = true;
-              effectiveRole = previousEffectiveRole;
             } else {
               isContinuous = false;
-              effectiveRole = item.role;
             }
           } else if (isSameTrack) {
             if (item.role === 'admin' || item.role === 'secondment' || item.role === 'subject' || item.role === 'leave') {
@@ -594,39 +575,57 @@
           }
         }
 
-        if (isContinuous && i !== 0) {
-          // 軌跡延續
+        // 若軌跡中斷，切換新的 Track ID
+        if (!isContinuous && i !== 0 && currentStreakRole !== null) {
+          currentStreakId++;
+          currentStreakRole = item.role;
+          forwardStreakLength = 0;
         } else if (i !== 0) {
-          currentStreakId++; // 軌跡中斷，更換 ID
-          streakLength = 0;
+          forwardStreakLength++;
         }
 
-        item.effectiveRole = effectiveRole;
+        item.effectiveRole = currentStreakRole;
         item.streakId = currentStreakId;
-        item.streakLength = streakLength;
-        item.pts = ptsMap[effectiveRole][streakLength] !== undefined ? ptsMap[effectiveRole][streakLength] : 0;
-
-        streakLength++;
-        previousEffectiveRole = effectiveRole;
       }
     }
 
-    // 第一階段計算：先假設所有勾選的後母班都有效
-    runCalculationPass();
+    runForwardTrackPass();
 
-    // 智慧防呆：檢查後母班軌跡是否成功延續到 114 學年
-    let targetStreakId = data[data.length - 1].streakId; // 114 學年所屬的軌跡 ID
+    // 第二階段：智慧防呆 - 檢查後母班是否一路順利連線到 114 學年
+    let targetStreakId = data[data.length - 1].streakId; 
     for (let i = 0; i < data.length; i++) {
       if (data[i].isStepmother && data[i].streakId !== targetStreakId) {
-        // 若該後母班不在最終的連續軌跡上，代表權利已於過往消耗，系統背景註銷其補分資格
+        // 軌跡斷裂，背景註銷過往後母班權益
         data[i].isStepmother = false;
       }
     }
+    
+    // 防呆後重新確認最終軌跡
+    runForwardTrackPass();
 
-    // 第二階段計算：使用修正後的權益再次計算最終真實分數
-    runCalculationPass();
+    // 第三階段：逆向給分 (114->109) - 核心修正，確保所有軌跡一律由 114 往回起算分數
+    let streakLengths = {}; 
+    for (let i = data.length - 1; i >= 0; i--) {
+      let item = data[i];
+      if (item.role === 'not_employed') {
+        item.pts = 0;
+        item.streakLength = 0;
+        continue;
+      }
 
-    // 產生結果報表 (倒序顯示 114 -> 109)
+      let sid = item.streakId;
+      if (streakLengths[sid] === undefined) {
+        streakLengths[sid] = 0; // 每個軌跡群組逆向遇到的第一個年份，年資=0 (第一年)
+      }
+
+      let currentLen = streakLengths[sid];
+      item.streakLength = currentLen;
+      item.pts = ptsMap[item.effectiveRole][currentLen] !== undefined ? ptsMap[item.effectiveRole][currentLen] : 0;
+
+      streakLengths[sid]++; // 往下一個逆向年份遞增
+    }
+
+    // 產生結果報表 (由 114 -> 109 輸出)
     let totalPoints = 0;
     let breakdownLines = [];
     
@@ -634,7 +633,6 @@
       let item = data[i];
       totalPoints += item.pts;
       
-      // 若該年為未到職，直接顯示無積分並跳過後續名稱組合
       if (item.role === 'not_employed') {
         breakdownLines.push(`<li>${item.year} 學年：<span style="color:#718096;">未到職 (無積分)</span></li>`);
         continue;
@@ -650,25 +648,22 @@
           let effRoleText = roleOptions.find(opt => opt.value === item.effectiveRole).text.split(' ')[0];
           displayRoleName += ` <span style="color:#e53e3e; font-weight:bold;">[補分：接續${effRoleText}]</span>`;
         } else if (item.isStepmother) {
-           displayRoleName += ` <span style="color:#e53e3e; font-weight:bold;">[後母班]</span>`;
+          displayRoleName += ` <span style="color:#e53e3e; font-weight:bold;">[後母班接續]</span>`;
         } else if (item.originalStepmother && !item.isStepmother) {
-           // 新增判斷：有勾選但被防呆機制取消，代表過往已使用
-           let nextYear = item.year + 1;
-           extraNotice = ` <span style="color:#64748b; font-size:0.9em;">(後母班學年、補分於選填${nextYear}時使用完畢)</span>`;
+          extraNotice = ` <span style="color:#64748b; font-size:0.9em;">(後母班學年已於其他年度使用完畢或中斷)</span>`;
         }
       }
 
-      let statusText = (item.streakLength === 0) ? "(重新起算)" : `(連續第 ${item.streakLength + 1} 年)`;
+      let statusText = (item.streakLength === 0) ? "(起算第 1 年)" : `(連續第 ${item.streakLength + 1} 年)`;
       breakdownLines.push(`<li>${item.year} 學年：${displayRoleName} ${statusText} 獲得 <strong>${item.pts}</strong> 分${extraNotice}</li>`);
     }
 
     document.getElementById('final-score').innerText = totalPoints;
-    document.getElementById('score-breakdown').innerHTML = "<strong>各學年得分明細（由近期回溯）：</strong><ul>" + breakdownLines.join('') + "</ul>";
+    document.getElementById('score-breakdown').innerHTML = "<strong>各學年得分明細：</strong><ul>" + breakdownLines.join('') + "</ul>";
     document.getElementById('result-container').style.display = 'block';
     document.getElementById('result-container').scrollIntoView({ behavior: 'smooth' });
   }
 
-  // 新增：切換維護資訊顯示狀態的函數
   function toggleMaintenance() {
     const infoDiv = document.getElementById('maintenance-info');
     const btn = document.querySelector('.maintenance-btn');
@@ -681,24 +676,18 @@
     }
   }
 
-  // 新增：清除表單與計算結果的函數
   function clearForm() {
-    // 1. 清除所有的 radio 按鈕與 checkbox
     const inputs = document.querySelectorAll('input[type="radio"], input[type="checkbox"]');
     inputs.forEach(input => input.checked = false);
 
-    // 2. 隱藏所有的年級選擇區塊
     const gradeContainers = document.querySelectorAll('.grade-container');
     gradeContainers.forEach(container => container.style.display = 'none');
 
-    // 3. 恢復所有未到職的遮罩與停用狀態
     handleNotEmployedChange();
 
-    // 4. 隱藏計算結果區塊
     const resultContainer = document.getElementById('result-container');
     resultContainer.style.display = 'none';
 
-    // 5. 平滑滾動回畫面最上方
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 </script>
